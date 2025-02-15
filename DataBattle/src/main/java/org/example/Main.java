@@ -5,6 +5,5 @@ public class Main {
 
         System.out.println("Hello, World!");
 
-        Player player = new Player();
     }
 }
