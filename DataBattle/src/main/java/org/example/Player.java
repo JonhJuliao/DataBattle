@@ -2,15 +2,10 @@ package org.example;
 
 import lombok.Data;
 
-import java.net.InetAddress;
 import java.util.Random;
 
 @Data
 public class Player {
-
-    private InetAddress ip;
-
-    private int port;
 
     private String name;
 

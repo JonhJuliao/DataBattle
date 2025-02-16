@@ -15,11 +15,10 @@ public class Game {
     }
     //TODO: Remover comentários em excesso antes de apresentar ao professor
     public void playRound() {
-        System.out.println("------ Nova Rodada -------");
 
         for(Player player : players){
             player.rollDice();
-            System.out.println(player.getName() + "rolou " + player.getDiceRoll());
+            System.out.println(player.getName() + " rolou " + player.getDiceRoll());
         }
 
         players.sort((a, b) -> Integer.compare(b.getDiceRoll(), a.getDiceRoll())); //Ordena lista de maior numero no dados para menor
@@ -52,7 +51,7 @@ public class Game {
 
         if(hightRoll == 6) { //Dano dobrado se o maior numero for 6
             baseDamage *=2;
-            System.out.println("ATAQUE CRÍTICO!!! O dano de ataque foi dobrado para" + baseDamage);
+            System.out.println("ATAQUE CRÍTICO!!! O dano de ataque foi dobrado para " + baseDamage);
         }
 
         atacarJogadores(players, attackers, fuckedPlayers ,bestDefenders, baseDamage); //Separei a lógica para fica mais legível
@@ -62,16 +61,23 @@ public class Game {
     }
 
     private void atacarJogadores(List<Player> players, List<Player> attackers, List<Player> fuckedPlayers ,List<Player> bestDefenders, int baseDamage) {
+
+        List<Player> eliminatedPlayers = new ArrayList<>();
+
         for(Player player : players){
             if(!attackers.contains(player) && !bestDefenders.contains(player)){ //Ataca todos os jogadores, exceto os bestDefenders e/ou os atacantes;
                 for(Player attacker : attackers){ //Um ataque para cada atacante
                     player.takeDamage(baseDamage);
                     System.out.println("WOOSH O jogador " + player.getName() + " foi atacado e recebeu " + baseDamage + " de dano");
-                    verificaSePerdeu(player);
+                    if (player.getHealth() <= 0 && !eliminatedPlayers.contains(player)) {
+                        eliminatedPlayers.add(player);
+                    }
                     if(fuckedPlayers.contains(player)){
                         player.takeDamage(baseDamage);
                         System.out.println("WOOSH Que azar! O jogador " + player.getName() + " foi atacado duas vezes e recebeu mais " + baseDamage + " de dano");
-                        verificaSePerdeu(player);
+                        if (player.getHealth() <= 0 && !eliminatedPlayers.contains(player)) {
+                            eliminatedPlayers.add(player);
+                        }
                     }
                 }
             }
@@ -84,7 +90,9 @@ public class Game {
 
                 System.out.println("O jogador "+ bestDefender.getName() + " defendeu e reduziu o dano para " + reducedDamage);
 
-                verificaSePerdeu(bestDefender);
+                if (bestDefender.getHealth() <= 0 && !eliminatedPlayers.contains(bestDefender)) {
+                    eliminatedPlayers.add(bestDefender);
+                }
             }
         }
 
@@ -95,12 +103,19 @@ public class Game {
                     if(!attacker.equals(otherAtacker)){ //Evita que o atacante ataque a si mesmo
                         attacker.takeDamage(reducedDamage);
                         System.out.println("O jogador "+ attacker + " defendeu e reduziu o dano para " + reducedDamage);
-                        verificaSePerdeu(attacker);
+                        if (attacker.getHealth() <= 0 && !eliminatedPlayers.contains(attacker)) {
+                            eliminatedPlayers.add(attacker);
+                        }
                     }
                 }
 
             }
         }
+
+        for (Player eliminated : eliminatedPlayers) {
+            System.out.println("Brutal! O jogador " + eliminated.getName() + " perdeu todos os pontos de vida e foi eliminado");
+        }
+
     }
 
     public boolean isGamerOver(){
@@ -109,12 +124,6 @@ public class Game {
 
     public String getWinner() {
         return players.get(0).getName();
-    }
-
-    private void verificaSePerdeu(Player player){
-        if(player.getHealth() <= 0){
-            System.out.println("Brutal! O jogador " + player.getName() + "perdeu todos os pontos de vida e foi eliminado");
-        }
     }
 
 }
