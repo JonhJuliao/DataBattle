@@ -5,41 +5,45 @@ import java.util.List;
 
 public class Game {
 
-    private List<Player> players;
+    private List<PlayerHandler> players;
 
-    public Game(List<String> playerNames) {
-        players = new ArrayList<>();
-        for(String name : playerNames){
-            players.add(new Player(name));
-        }
+    public Game(List<PlayerHandler> players) {
+        this.players = new ArrayList<>(players);
     }
-    //TODO: Remover comentários em excesso antes de apresentar ao professor
+    //TODO: Comentários para estudo, remover antes de enviar e apresentar ao professor.
     public void playRound() {
 
-        for(Player player : players){
+        for(PlayerHandler player : players){
             player.rollDice();
-            System.out.println(player.getName() + " rolou " + player.getDiceRoll());
         }
 
-        players.sort((a, b) -> Integer.compare(b.getDiceRoll(), a.getDiceRoll())); //Ordena lista de maior numero no dados para menor
+        //Ordena lista de maior numero no dados para menor
+        players.sort((a, b) -> Integer.compare(b.getDiceRoll(), a.getDiceRoll()));
 
         int hightRoll = players.get(0).getDiceRoll();
-        List<Player> attackers = new ArrayList<>(); //São os jogadores que tiraram o maior numero. Se houver só um ele não sofre dano, se não, eles serão o bestDefemder
 
-        List<Player> fuckedPlayers = new ArrayList<>(); //são os jogadores que receberão dano duas vezes
+        //São os jogadores que tiraram o maior numero. Se houver só um ele não sofre dano, se não, eles serão o bestDefemder
+        List<PlayerHandler> attackers = new ArrayList<>();
 
-        List<Player> bestDefenders = new ArrayList<>(); //Ele só existe se tiver apenas um atacante, nesse caso ele é o cara que vai ter dano reduzido
+        //são os jogadores que receberão dano duas vezes
+        List<PlayerHandler> fuckedPlayers = new ArrayList<>();
+
+        //Ele só existe se tiver apenas um atacante, são os jogadores que vão ter dano reduzido
+        List<PlayerHandler> bestDefenders = new ArrayList<>();
 
         boolean foundBestDefender = false;
 
-        for(Player player : players){
-            if(player.getDiceRoll() == hightRoll){ //Todos que tiraram o maior numero se tornam o atacante da rodada
+        for(PlayerHandler player : players){
+            //Todos que tiraram o maior numero se tornam o atacante da rodada
+            if(player.getDiceRoll() == hightRoll){
                 attackers.add(player);
             }
-            else if(player.getDiceRoll() == 1) { //Todos os que tiraram 1 se tornam os jogadores que vão se ferrar na rodada (serem atacados duas vezes na rodada)
+            //Todos os que tiraram 1 se tornam os jogadores que vão se ferrar na rodada (serem atacados duas vezes na rodada)
+            else if(player.getDiceRoll() == 1) {
                 fuckedPlayers.add(player);
             }
-            else if (!foundBestDefender) { //Se só tiver um numero maior na rodada, o segundo maior vira o bestDefender
+            //Se só tiver apenas um numero maior na rodada, o segundo maior vira o bestDefender
+            else if (!foundBestDefender) {
                 bestDefenders.add(player);
                 foundBestDefender = true;
             } else if (bestDefenders.get(0).getDiceRoll() == player.getDiceRoll()) {
@@ -47,34 +51,39 @@ public class Game {
             }
         }
 
-        int baseDamage = 10; //Podemos aumentar o dano se quisermos que o jogo acabe mais rapido
+        //Dano base do jogo
+        int baseDamage = 10;
 
-        if(hightRoll == 6) { //Dano dobrado se o maior numero for 6
+        //Dano dobrado se o maior numero for 6
+        if(hightRoll == 6) {
             baseDamage *=2;
-            System.out.println("ATAQUE CRÍTICO!!! O dano de ataque foi dobrado para " + baseDamage);
+            broadcast("ATAQUE CRÍTICO!!! O dano de ataque foi dobrado para " + baseDamage);
         }
 
-        atacarJogadores(players, attackers, fuckedPlayers ,bestDefenders, baseDamage); //Separei a lógica para fica mais legível
+        //Separei a lógica para fica mais legível
+        atacarJogadores(players, attackers, fuckedPlayers ,bestDefenders, baseDamage);
 
-        players.removeIf(player -> player.getHealth() <=0); //Remove da lista os jogadores que foram eliminados
+        //Remove da lista os jogadores que foram eliminados
+        players.removeIf(player -> player.getHealth() <=0);
 
     }
 
-    private void atacarJogadores(List<Player> players, List<Player> attackers, List<Player> fuckedPlayers ,List<Player> bestDefenders, int baseDamage) {
+    private void atacarJogadores(List<PlayerHandler> players, List<PlayerHandler> attackers, List<PlayerHandler> fuckedPlayers ,List<PlayerHandler> bestDefenders, int baseDamage) {
 
-        List<Player> eliminatedPlayers = new ArrayList<>();
+        List<PlayerHandler> eliminatedPlayers = new ArrayList<>();
 
-        for(Player player : players){
-            if(!attackers.contains(player) && !bestDefenders.contains(player)){ //Ataca todos os jogadores, exceto os bestDefenders e/ou os atacantes;
-                for(Player attacker : attackers){ //Um ataque para cada atacante
+        for(PlayerHandler player : players){
+            //Ataca todos os jogadores, exceto os bestDefenders e/ou os atacantes;
+            if(!attackers.contains(player) && !bestDefenders.contains(player)){
+                for(PlayerHandler attacker : attackers){ //Um ataque para cada atacante
                     player.takeDamage(baseDamage);
-                    System.out.println("WOOSH O jogador " + player.getName() + " foi atacado e recebeu " + baseDamage + " de dano");
+                    broadcast("WOOSH O jogador " + player.getName() + " foi atacado e recebeu " + baseDamage + " de dano");
                     if (player.getHealth() <= 0 && !eliminatedPlayers.contains(player)) {
                         eliminatedPlayers.add(player);
                     }
                     if(fuckedPlayers.contains(player)){
                         player.takeDamage(baseDamage);
-                        System.out.println("WOOSH Que azar! O jogador " + player.getName() + " foi atacado duas vezes e recebeu mais " + baseDamage + " de dano");
+                        broadcast("WOOSH Que azar! O jogador " + player.getName() + " foi atacado duas vezes e recebeu mais " + baseDamage + " de dano");
                         if (player.getHealth() <= 0 && !eliminatedPlayers.contains(player)) {
                             eliminatedPlayers.add(player);
                         }
@@ -83,12 +92,13 @@ public class Game {
             }
         }
 
-        if(!bestDefenders.isEmpty()){ //Nesse caso, como só tem um atacante, o bestDefender defende metade do dano
+        //Nesse caso, como só tem um atacante, os bestDefenders defendem metade do dano
+        if(!bestDefenders.isEmpty()){
             int reducedDamage = baseDamage / 2;
-            for(Player bestDefender : bestDefenders){
+            for(PlayerHandler bestDefender : bestDefenders){
                 bestDefender.takeDamage(reducedDamage);
 
-                System.out.println("O jogador "+ bestDefender.getName() + " defendeu e reduziu o dano para " + reducedDamage);
+                broadcast("O jogador "+ bestDefender.getName() + " defendeu e reduziu o dano para " + reducedDamage);
 
                 if (bestDefender.getHealth() <= 0 && !eliminatedPlayers.contains(bestDefender)) {
                     eliminatedPlayers.add(bestDefender);
@@ -96,13 +106,14 @@ public class Game {
             }
         }
 
-        if(attackers.size() >1){ //Se houver mais de um atacante, então eles mesmos serão os bestDefenders
+        //Se houver mais de um atacante, então eles mesmos serão os bestDefenders
+        if(attackers.size() >1){
             int reducedDamage = baseDamage / 2;
-            for(Player attacker : attackers){
-                for(Player otherAtacker : attackers){
+            for(PlayerHandler attacker : attackers){
+                for(PlayerHandler otherAtacker : attackers){
                     if(!attacker.equals(otherAtacker)){ //Evita que o atacante ataque a si mesmo
                         attacker.takeDamage(reducedDamage);
-                        System.out.println("O jogador "+ attacker + " defendeu e reduziu o dano para " + reducedDamage);
+                        broadcast("O jogador "+ attacker + " defendeu e reduziu o dano para " + reducedDamage);
                         if (attacker.getHealth() <= 0 && !eliminatedPlayers.contains(attacker)) {
                             eliminatedPlayers.add(attacker);
                         }
@@ -112,8 +123,8 @@ public class Game {
             }
         }
 
-        for (Player eliminated : eliminatedPlayers) {
-            System.out.println("Brutal! O jogador " + eliminated.getName() + " perdeu todos os pontos de vida e foi eliminado");
+        for (PlayerHandler eliminated : eliminatedPlayers) {
+            broadcast("Brutal! O jogador " + eliminated.getName() + " perdeu todos os pontos de vida e foi eliminado");
         }
 
     }
@@ -122,8 +133,10 @@ public class Game {
         return players.size()==1;
     }
 
-    public String getWinner() {
-        return players.get(0).getName();
+    private void broadcast(String message) {
+        for (PlayerHandler player : players) {
+            player.sendMessage(message);
+        }
     }
 
 }
