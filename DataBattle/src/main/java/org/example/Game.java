@@ -23,13 +23,13 @@ public class Game {
 
         int hightRoll = players.get(0).getDiceRoll();
 
-        //São os jogadores que tiraram o maior numero. Se houver só um ele não sofre dano, se não, eles serão o bestDefemder
+        //São os jogadores que tiraram o maior numero na rolagem de dados. Se tiver apenas um atacante, ele não vai receber dano
         List<PlayerHandler> attackers = new ArrayList<>();
 
         //são os jogadores que receberão dano duas vezes
         List<PlayerHandler> fuckedPlayers = new ArrayList<>();
 
-        //Ele só existe se tiver apenas um atacante, são os jogadores que vão ter dano reduzido
+        //são os jogadores que vão ter dano reduzido (segundo maior numero na rolagem de dados)
         List<PlayerHandler> bestDefenders = new ArrayList<>();
 
         boolean foundBestDefender = false;
