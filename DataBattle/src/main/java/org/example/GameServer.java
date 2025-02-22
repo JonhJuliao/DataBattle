@@ -43,7 +43,7 @@ public class GameServer {
 
         game = new Game(players);
 
-        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Todos os jogadores conectados! Aguardando confirmação...");
+        broadcast("[" + dtf.format(LocalDateTime.now()) + "] Todos os jogadores conectados! Aguardando confirmação...");
 
         //Espera um tempo para que todos os jogadores estejam prontos
         while (!allPlayersReady()) {
@@ -52,13 +52,13 @@ public class GameServer {
             //Se os jogadores não digitarem "pronto", não vai passar daqui.
         }
 
-        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Todos confirmaram! O jogo vai começar...");
+        broadcast("[" + dtf.format(LocalDateTime.now()) + "] Todos confirmaram! O jogo vai começar...");
 
         //Inicia o jogo
         startGame();
     }
 
-    //Esse stream().allMatch peccore a lista de players e veririca se estão prontos.
+    //Esse stream().allMatch pecorre a lista de players e verifica se estão prontos.
     private static boolean allPlayersReady() {
         return players.stream().allMatch(PlayerHandler::isReady);
     }
@@ -120,7 +120,7 @@ public class GameServer {
 
         //Verifica se todos saíram antes de o servidor encerrar a conexão
         if (players.isEmpty()) {
-            broadcast("Todos os jogadores saíram. O servidor será encerrado.");
+            System.out.println("Todos os jogadores saíram. O servidor será encerrado.");
 
             //O System.exit(0) faz o sistema entender que o programa foi encerrado de forma normal e controlada.
             System.exit(0);
