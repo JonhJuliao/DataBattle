@@ -2,6 +2,7 @@ package org.example;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Game {
 
@@ -11,10 +12,10 @@ public class Game {
         this.players = new ArrayList<>(players);
     }
     //TODO: Comentários para estudo, remover antes de enviar e apresentar ao professor.
-    public void playRound() {
+    public void playRound(Map<PlayerHandler, Integer> diceResults) {
 
-        for(PlayerHandler player : players){
-            player.rollDice();
+        for (Map.Entry<PlayerHandler, Integer> entry : diceResults.entrySet()) {
+            entry.getKey().setDiceRoll(entry.getValue());
         }
 
         //Ordena lista de maior numero no dados para menor
@@ -92,7 +93,7 @@ public class Game {
             }
         }
 
-        //Nesse caso, como só tem um atacante, os bestDefenders defendem metade do dano
+        //Os jogadores com o segundo maior dado defendem metade do dano
         if(!bestDefenders.isEmpty()){
             int reducedDamage = baseDamage / 2;
             for(PlayerHandler bestDefender : bestDefenders){
@@ -106,14 +107,14 @@ public class Game {
             }
         }
 
-        //Se houver mais de um atacante, então eles mesmos serão os bestDefenders
+        //Se houver mais de um atacante, os atacantes também defendem metade do dano
         if(attackers.size() >1){
             int reducedDamage = baseDamage / 2;
             for(PlayerHandler attacker : attackers){
                 for(PlayerHandler otherAtacker : attackers){
                     if(!attacker.equals(otherAtacker)){ //Evita que o atacante ataque a si mesmo
                         attacker.takeDamage(reducedDamage);
-                        broadcast("O jogador "+ attacker + " defendeu e reduziu o dano para " + reducedDamage);
+                        broadcast("O jogador "+ attacker.getName() + " defendeu e reduziu o dano para " + reducedDamage);
                         if (attacker.getHealth() <= 0 && !eliminatedPlayers.contains(attacker)) {
                             eliminatedPlayers.add(attacker);
                         }

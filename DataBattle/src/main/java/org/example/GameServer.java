@@ -12,7 +12,6 @@ public class GameServer {
     private static final int SERVER_PORT = 6789; //Define a porta do servidor
     private static final int MAX_PLAYERS = 4; //Define o número máximo de jogadores
     private static final List<PlayerHandler> players = new ArrayList<>(); //Lista onde armazenamos os clientes conectados
-    private static int currentTurnIndex = 0; //Controla de quem é a vez de jogar.
     private static Game game;
 
     //TODO: Comentários para estudo, remover antes de enviar e apresentar ao professor.
@@ -64,29 +63,26 @@ public class GameServer {
     }
 
     private static void startGame() throws IOException {
+
         while (!game.isGamerOver()) {
-            PlayerHandler currentPlayer = players.get(currentTurnIndex);
+            Map<PlayerHandler, Integer> diceResults = new HashMap<>();
 
-            //Mandaa uma mensagem para cada jogador.
-            broadcast("É a vez de " + currentPlayer.getName() + "! Aguarde sua vez...");
+            // Cada jogador rola o dado primeiro
+            for (PlayerHandler player : players) {
+                player.sendMessage("Sua vez! Pressione ENTER para rolar o dado.");
+                player.waitForRoll(); // Aguarda o jogador pressionar ENTER
+                int diceRoll = player.rollDice();
+                diceResults.put(player, diceRoll); // Salva o resultado do dado
+                broadcast(player.getName() + " rolou um " + diceRoll);
+            }
 
-            //Envia uma mensagem para o jogador atual.
-            currentPlayer.sendMessage("Sua vez! Pressione ENTER para rolar o dado.");
+            // Agora que todos rolaram os dados, processamos a rodada
+            game.playRound(diceResults);
 
-            //Entrada de dados sem nada, o jogador precisa apenas pressionar Enter e o dado sera rolado abaixo.
-            currentPlayer.waitForRoll();
-
-            //Faz um random que vai de 1 a 6 para simular a rolagem de um dado d6 convencional.
-            int diceRoll = new Random().nextInt(6) + 1;
-
-            //Informa a todos os jogadores o que o resultado do dado do jogador atual.
-            broadcast(currentPlayer.getName() + " rolou um " + diceRoll);
-
-            //Separei a lógica do jogo em outra classe, para pode tratar de todos os detalhes.
-            game.playRound();
-
-            //"Truque" matemático para fazer com que o contador nunca fique maior que o tamanho da lista, quando chegar no ultimo número ele vai voltar para 0
-            currentTurnIndex = (currentTurnIndex + 1) % players.size();
+            // Verificar se o jogo acabou
+            if (game.isGamerOver()) {
+                break;
+            }
         }
 
         //Anuncia o ganhador

@@ -37,6 +37,10 @@ public class PlayerHandler implements Runnable {
         return diceRoll;
     }
 
+    public void setDiceRoll(int diceRoll) {
+        this.diceRoll = diceRoll;
+    }
+
     public void takeDamage(int damage) {
         health -= damage;
     }
