@@ -7,60 +7,51 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-public class GameServer {
+public class GameServer implements Terminal {
 
-    private static final int SERVER_PORT = 6789; //Define a porta do servidor
-    private static final int MAX_PLAYERS = 4; //Define o número máximo de jogadores
-    private static final List<PlayerHandler> players = new ArrayList<>(); //Lista onde armazenamos os clientes conectados
+    private static final int SERVER_PORT = 6789;
+    private static final int MAX_PLAYERS = 4;
+    private static final List<PlayerHandler> players = new ArrayList<>();
     private static Game game;
     private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+    private static final String[] PLAYER_COLORS = {AZUL, AMARELO, VERDE, MAGENTA};
 
     public static void main(String[] args) throws Exception {
-        //Criamos um servidor TCP que escuta na porta que definimos.
-        ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
-        log("TCP server rodando na porta " + SERVER_PORT);
+        try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
+            log("✅ Servidor rodando na porta " + SERVER_PORT);
 
-        //O servidor fica em loop aceitando conexões até que 4 jogadores entrem.
-        while (players.size() < MAX_PLAYERS) {
-            log("Aguardando novos jogadores...");
+            while (players.size() < MAX_PLAYERS) {
+                log("⏳ Aguardando novos jogadores...");
+                Socket connectionSocket = serverSocket.accept();
+                PlayerHandler player = new PlayerHandler(connectionSocket);
+                players.add(player);
+                new Thread(player).start();
+                assignPlayerColors();
+                log("🎮 Novo jogador conectado. Total de jogadores: " + players.size());
+            }
 
-            //Cria um novo Socket que representa a conexão com o cliente.
-            Socket connectionSocket = serverSocket.accept();
+            game = new Game(players);
+            broadcast("🚀 Todos os jogadores conectados! Aguardando confirmação...");
 
-            //Cria um PlayerHandler para gerenciar a comunicação o jogador.
-            PlayerHandler player = new PlayerHandler(connectionSocket);
+            while (!allPlayersReady()) {
+                Thread.sleep(1000);
+            }
 
-            //Adicionamos o PlayerHandler na lista de players.
-            players.add(player);
+            log("✅ Todos os jogadores confirmaram. Iniciando partida!");
+            broadcast("🔥 O jogo vai começar!");
 
-            //Cria uma nova thread para que cada jogador seja gerenciado de forma simultânea.
-            new Thread(player).start();
-            log("Novo jogador conectado. Total de jogadores: " + players.size());
+            startGame();
+        } catch (IOException e) {
+            log("❌ Erro ao iniciar o servidor: " + e.getMessage());
         }
-
-        game = new Game(players);
-        broadcast("Todos os jogadores conectados! Aguardando confirmação...");
-
-        //Espera um tempo para que todos os jogadores estejam prontos
-        while (!allPlayersReady()) {
-            Thread.sleep(1000); //Aqui temos uma pausa de 1 segundo até a próxima verificação do loop.
-        }
-
-        log("Todos os jogadores confirmaram. Iniciando partida!");
-        broadcast("Todos confirmaram! O jogo vai começar...");
-
-        //Inicia o jogo
-        startGame();
     }
 
     private static final Set<String> confirmedPlayers = new HashSet<>();
 
     private static void checkPlayerConfirmations() {
         for (PlayerHandler player : players) {
-            // Se o jogador está pronto e ainda não foi registrado
-            if (player.isReady() && !confirmedPlayers.contains(player.getName())) {
-                confirmedPlayers.add(player.getName()); // Registra confirmação
-                log("Jogador " + player.getName() + " confirmou a prontidão.");
+            if (player.isReady() && confirmedPlayers.add(player.getName())) {
+                log("🎲 Jogador " + player.getName() + " confirmou a prontidão.");
                 log(confirmedPlayers.size() + " de " + MAX_PLAYERS + " jogadores confirmaram.");
             }
         }
@@ -72,66 +63,128 @@ public class GameServer {
     }
 
     private static void startGame() throws IOException {
-        while (!game.isGamerOver()) {
-            // Atualiza a lista de jogadores ativos antes da rodada
-            players.removeIf(player -> player.getHealth() <= 0);
-
+        while (!game.isGameOver()) {
             Map<PlayerHandler, Integer> diceResults = new HashMap<>();
 
             for (PlayerHandler player : players) {
-                if (player.getHealth() > 0) {
-                    player.sendMessage("Sua vez! Pressione ENTER para rolar o dado.");
+                if (player.isEliminated()) {
+                    if (!player.isDisconnected()) {
+                        player.sendMessage("💀 Você está eliminado. Acompanhe como espectador.");
+                    }
+                    continue;
+                }
+
+                player.resetRoll();
+                player.sendMessage("\n🚀 Sua vez! Pressione ENTER para rolar o dado.");
+
+                // Avisar os outros para aguardarem
+                for (PlayerHandler otherPlayer : players) {
+                    if (!otherPlayer.equals(player) && !otherPlayer.isEliminated()) {
+                        otherPlayer.sendMessage("⏳ Espere os outros rolarem os dados...");
+                    }
+                }
+
+                try {
                     player.waitForRoll();
                     int diceRoll = player.rollDice();
                     diceResults.put(player, diceRoll);
-                    broadcast(player.getName() + " rolou um " + diceRoll);
+                } catch (IOException e) {
+                    log("⚠️ Erro ao receber jogada de " + player.getName() + ": " + e.getMessage());
                 }
             }
 
+            // Exibe os resultados consolidados da rodada
+            broadcast("\n📊 Resultados da rodada:");
+            for (PlayerHandler player : players) {
+                if (!player.isDisconnected()) {
+                    for (Map.Entry<PlayerHandler, Integer> entry : diceResults.entrySet()) {
+                        String playerName = entry.getKey().getName();
+                        int roll = entry.getValue();
+                        // Exibe "Você" para o próprio jogador
+                        String displayName = playerName.equals(player.getName()) ? "Você" : playerName;
+                        player.sendMessage(displayName + " rolou um " + roll);
+                    }
+                }
+            }
+            broadcast("FIM_RESULTADOS");
+
+            // Processa a rodada com base nas rolagens
             game.playRound(diceResults);
 
-            // Verifica se a partida acabou após cada rodada
-            if (game.isGamerOver()) {
+            if (game.isGameOver()) {
                 break;
             }
         }
 
-        announceWinner();
         askForReplay();
     }
 
-    private static void announceWinner() {
-        if (game.isGamerOver()) {
-            String vencedor = players.get(0).getName();
-            broadcast("🏆 O vencedor é " + vencedor + "!");
-            log("Partida encerrada. Vencedor: " + vencedor);
+    private static void assignPlayerColors() {
+        for (int i = 0; i < players.size(); i++) {
+            players.get(i).setColor(PLAYER_COLORS[i % PLAYER_COLORS.length]);
         }
     }
 
-    private static void askForReplay() throws IOException {
-        Iterator<PlayerHandler> iterator = players.iterator();
+    private static void askForReplay() {
+        broadcast("\n🏆 O jogo terminou! Decida se quer revanche.");
 
-        while (iterator.hasNext()) {
-            PlayerHandler player = iterator.next();
-            player.sendMessage("Deseja jogar novamente? (sim/não)");
-            String response = player.readMessage();
+        List<PlayerHandler> playersToRemove = new ArrayList<>();
 
-            if (!response.equalsIgnoreCase("sim")) {
-                log("Jogador " + player.getName() + " saiu do jogo.");
-                iterator.remove();
-                player.closeConnection();
+        for (PlayerHandler player : new ArrayList<>(players)) {
+            if (player.isDisconnected()) {
+                log("🔌 " + player.getName() + " foi desconectado.");
+                playersToRemove.add(player);
+                continue;
+            }
+
+            try {
+                if (player.isEliminated()) {
+                    player.sendMessage("💀 Você foi eliminado. Deseja acompanhar a revanche? (sim/não)");
+                } else {
+                    player.sendMessage("\n🔄 Deseja jogar novamente? (sim/não)");
+                }
+
+                String response = player.readMessage();
+                if ("sim".equalsIgnoreCase(response)) {
+                    player.resetPlayer();
+                    log("✅ " + player.getName() + " optou por jogar novamente.");
+                } else {
+                    log("🚪 " + player.getName() + " optou por sair.");
+                    player.closeConnection();
+                    playersToRemove.add(player);
+                }
+            } catch (IOException e) {
+                log("⚠️ Erro ao ler resposta de " + player.getName() + ". Considerando como 'não'.");
+                playersToRemove.add(player);
             }
         }
 
+        // Remove jogadores desconectados ou que optaram por sair
+        players.removeAll(playersToRemove);
+
+        // Limpa conexões inválidas
+        for (PlayerHandler removedPlayer : playersToRemove) {
+            removedPlayer.closeSilently();
+        }
+
         if (players.isEmpty()) {
-            log("Todos os jogadores saíram. O servidor será encerrado.");
+            log("💀 Todos os jogadores saíram. Encerrando servidor.");
             System.exit(0);
+        } else {
+            log("🔄 Revanche iniciada com " + players.size() + " jogadores.");
+            try {
+                startGame();
+            } catch (IOException e) {
+                log("❌ Erro ao reiniciar o jogo: " + e.getMessage());
+            }
         }
     }
 
     private static void broadcast(String message) {
         for (PlayerHandler player : players) {
-            player.sendMessage(message);
+            if (!player.isDisconnected()) {
+                player.sendMessage(message);
+            }
         }
     }
 
