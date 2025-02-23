@@ -121,7 +121,7 @@ public class GameServer implements Terminal {
                 : "❌ Nenhum vencedor definido.";
 
         // Mensagem final com emoji de fim de jogo
-        broadcast("\n🏁 O jogo terminou! " + winnerMessage + " Decida se quer revanche.");
+        broadcast("\n🏁 O jogo terminou! " + winnerMessage + "\n Decida se quer revanche!");
 
         List<PlayerHandler> playersToRemove = new ArrayList<>();
 
