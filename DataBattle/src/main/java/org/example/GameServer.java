@@ -13,19 +13,16 @@ public class GameServer {
     private static final int MAX_PLAYERS = 4; //Define o número máximo de jogadores
     private static final List<PlayerHandler> players = new ArrayList<>(); //Lista onde armazenamos os clientes conectados
     private static Game game;
+    private static final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
-    //TODO: Comentários para estudo, remover antes de enviar e apresentar ao professor.
     public static void main(String[] args) throws Exception {
-        final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-
         //Criamos um servidor TCP que escuta na porta que definimos.
         ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
-
-        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] TCP server rodando na porta " + SERVER_PORT);
+        log("TCP server rodando na porta " + SERVER_PORT);
 
         //O servidor fica em loop aceitando conexões até que 4 jogadores entrem.
         while (players.size() < MAX_PLAYERS) {
-            System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Aguardando novos jogadores...");
+            log("Aguardando novos jogadores...");
 
             //Cria um novo Socket que representa a conexão com o cliente.
             Socket connectionSocket = serverSocket.accept();
@@ -36,100 +33,109 @@ public class GameServer {
             //Adicionamos o PlayerHandler na lista de players.
             players.add(player);
 
-            //Cria uma nova thread para que cada jogador seja gerencia de forma simultânea.
+            //Cria uma nova thread para que cada jogador seja gerenciado de forma simultânea.
             new Thread(player).start();
+            log("Novo jogador conectado. Total de jogadores: " + players.size());
         }
 
         game = new Game(players);
-
-        broadcast("[" + dtf.format(LocalDateTime.now()) + "] Todos os jogadores conectados! Aguardando confirmação...");
+        broadcast("Todos os jogadores conectados! Aguardando confirmação...");
 
         //Espera um tempo para que todos os jogadores estejam prontos
         while (!allPlayersReady()) {
-            //Aqui temos uma pausa de 1 segundo até a proxima verificação do loop, dando tempo para os usuarios digitarem pronto
-            Thread.sleep(1000);
-            //Se os jogadores não digitarem "pronto", não vai passar daqui.
+            Thread.sleep(1000); //Aqui temos uma pausa de 1 segundo até a próxima verificação do loop.
         }
 
-        broadcast("[" + dtf.format(LocalDateTime.now()) + "] Todos confirmaram! O jogo vai começar...");
+        log("Todos os jogadores confirmaram. Iniciando partida!");
+        broadcast("Todos confirmaram! O jogo vai começar...");
 
         //Inicia o jogo
         startGame();
     }
 
-    //Esse stream().allMatch pecorre a lista de players e verifica se estão prontos.
+    private static final Set<String> confirmedPlayers = new HashSet<>();
+
+    private static void checkPlayerConfirmations() {
+        for (PlayerHandler player : players) {
+            // Se o jogador está pronto e ainda não foi registrado
+            if (player.isReady() && !confirmedPlayers.contains(player.getName())) {
+                confirmedPlayers.add(player.getName()); // Registra confirmação
+                log("Jogador " + player.getName() + " confirmou a prontidão.");
+                log(confirmedPlayers.size() + " de " + MAX_PLAYERS + " jogadores confirmaram.");
+            }
+        }
+    }
+
     private static boolean allPlayersReady() {
-        return players.stream().allMatch(PlayerHandler::isReady);
+        checkPlayerConfirmations();
+        return confirmedPlayers.size() == MAX_PLAYERS;
     }
 
     private static void startGame() throws IOException {
-
         while (!game.isGamerOver()) {
+            // Atualiza a lista de jogadores ativos antes da rodada
+            players.removeIf(player -> player.getHealth() <= 0);
+
             Map<PlayerHandler, Integer> diceResults = new HashMap<>();
 
-            // Cada jogador rola o dado primeiro
             for (PlayerHandler player : players) {
-                player.sendMessage("Sua vez! Pressione ENTER para rolar o dado.");
-                player.waitForRoll(); // Aguarda o jogador pressionar ENTER
-                int diceRoll = player.rollDice();
-                diceResults.put(player, diceRoll); // Salva o resultado do dado
-                broadcast(player.getName() + " rolou um " + diceRoll);
+                if (player.getHealth() > 0) {
+                    player.sendMessage("Sua vez! Pressione ENTER para rolar o dado.");
+                    player.waitForRoll();
+                    int diceRoll = player.rollDice();
+                    diceResults.put(player, diceRoll);
+                    broadcast(player.getName() + " rolou um " + diceRoll);
+                }
             }
 
-            // Agora que todos rolaram os dados, processamos a rodada
             game.playRound(diceResults);
 
-            // Verificar se o jogo acabou
+            // Verifica se a partida acabou após cada rodada
             if (game.isGamerOver()) {
                 break;
             }
         }
 
-        //Anuncia o ganhador
         announceWinner();
-
-        //Pergunta se querem jogar de novo
         askForReplay();
     }
 
     private static void announceWinner() {
         if (game.isGamerOver()) {
-            broadcast("🏆 O vencedor é " + players.get(0).getName() + "!");
+            String vencedor = players.get(0).getName();
+            broadcast("🏆 O vencedor é " + vencedor + "!");
+            log("Partida encerrada. Vencedor: " + vencedor);
         }
     }
 
     private static void askForReplay() throws IOException {
         Iterator<PlayerHandler> iterator = players.iterator();
 
-        //Interage com cada jogador perguntando se ele quer jogar
         while (iterator.hasNext()) {
             PlayerHandler player = iterator.next();
             player.sendMessage("Deseja jogar novamente? (sim/não)");
             String response = player.readMessage();
 
-            //se a resposta for não(ou qualquer coisa que não seja sim kkk) o player é desconectado.
             if (!response.equalsIgnoreCase("sim")) {
+                log("Jogador " + player.getName() + " saiu do jogo.");
                 iterator.remove();
                 player.closeConnection();
             }
         }
 
-        //Verifica se todos saíram antes de o servidor encerrar a conexão
         if (players.isEmpty()) {
-            System.out.println("Todos os jogadores saíram. O servidor será encerrado.");
-
-            //O System.exit(0) faz o sistema entender que o programa foi encerrado de forma normal e controlada.
+            log("Todos os jogadores saíram. O servidor será encerrado.");
             System.exit(0);
         }
     }
 
-    /*Demos o nome de broadcast para esse metodo, pois ele lembra o conceito de endereço de broadcast
-    * que é o ultimo endereço de ip de uma sub-rede, que pode ser utilizado para se comunicar
-    * com todos os dispositivos da subrede ao mesmo tempo
-    * e este metodo é utilizado para mandar uma mensagem para todos os players conectados */
     private static void broadcast(String message) {
         for (PlayerHandler player : players) {
             player.sendMessage(message);
         }
+    }
+
+    private static void log(String message) {
+        System.out.println("[" + dtf.format(LocalDateTime.now()) + "] " + message);
     }
 }

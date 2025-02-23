@@ -9,7 +9,7 @@ import java.util.Random;
 
 //A classe implementa Runnable para que cada jogador seja tratado em uma thread separada.
 //Isso permite que o servidor lide com múltiplos jogadores simultaneamente, sem bloqueios.
-public class PlayerHandler implements Runnable {
+public class PlayerHandler implements Runnable, Terminal {
     private Socket socket; //Conexão de rede entre o servidor e o jogador
     private BufferedReader in; //Lê mensagens enviadas pelo jogador
     private DataOutputStream out; //Envia mensagens do servidor para o jogador
@@ -69,12 +69,15 @@ public class PlayerHandler implements Runnable {
 
     //Simula a rolagem de um dado d6 tradicional.
     public int rollDice() {
+        if (health <= 0) {
+            sendMessage("Você está eliminado e não pode mais jogar.");
+            return 0;
+        }
         Random random = new Random();
         diceRoll = random.nextInt(6) + 1;
         sendMessage("🎲 Você rolou um " + diceRoll);
         return diceRoll;
     }
-
 
     //Metodo executado quando a thread do jogador inicia.
     //Gerencia a comunicação entre o jogador e o servidor, coletando o nome e esperando a confirmação de prontidão.
@@ -84,16 +87,16 @@ public class PlayerHandler implements Runnable {
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new DataOutputStream(socket.getOutputStream());
 
-            sendMessage("Bem-vindo ao jogo! Aguarde o início da partida.");
+            sendMessage(FUNDO_CYAN + "Bem-vindo ao jogo! Aguarde o início da partida." + RESETAR);
             sendMessage("Digite seu nome:");
             name = readMessage();
 
             sendMessage("Aguardando outros jogadores...");
-            sendMessage("Digite 'pronto' para confirmar sua participação.");
+            sendMessage("Digite '1' para confirmar sua participação e que está pronto para começar!");
 
             while (!ready) {
                 String response = readMessage();
-                if ("pronto".equalsIgnoreCase(response)) {
+                if (response.equals("1")) {
                     ready = true;
                 }
             }

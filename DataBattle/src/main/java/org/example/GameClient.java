@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Scanner;
 
-public class GameClient {
+public class GameClient implements Terminal {
     public static void main(String[] args) {
         final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
@@ -17,7 +17,7 @@ public class GameClient {
         try {
             // Conecta ao servidor
             Socket clientSocket = new Socket(serverAddress, serverPort);
-            System.out.println("[" + dtf.format(LocalDateTime.now()) + "] Conectado ao servidor " + serverAddress + ":" + serverPort);
+            System.out.println(VERDE + "["+ dtf.format(LocalDateTime.now()) + "] Conectado ao servidor " + serverAddress + ":" + serverPort + RESETAR);
 
             // Criação de fluxos para entrada e saída de dados
             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
