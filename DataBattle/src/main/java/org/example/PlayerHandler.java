@@ -10,7 +10,7 @@ public class PlayerHandler implements Runnable, Terminal {
     private BufferedReader in;
     private DataOutputStream out;
     private String name;
-    private int health = 100;
+    private int health = 50;
     private boolean ready = false;
     private int diceRoll;
     private String color = RESETAR;

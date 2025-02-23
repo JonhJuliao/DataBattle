@@ -92,22 +92,6 @@ public class GameServer implements Terminal {
                     log("⚠️ Erro ao receber jogada de " + player.getName() + ": " + e.getMessage());
                 }
             }
-
-            // Exibe os resultados consolidados da rodada
-            broadcast("\n📊 Resultados da rodada:");
-            for (PlayerHandler player : players) {
-                if (!player.isDisconnected()) {
-                    for (Map.Entry<PlayerHandler, Integer> entry : diceResults.entrySet()) {
-                        String playerName = entry.getKey().getName();
-                        int roll = entry.getValue();
-                        // Exibe "Você" para o próprio jogador
-                        String displayName = playerName.equals(player.getName()) ? "Você" : playerName;
-                        player.sendMessage(displayName + " rolou um " + roll);
-                    }
-                }
-            }
-            broadcast("FIM_RESULTADOS");
-
             // Processa a rodada com base nas rolagens
             game.playRound(diceResults);
 
@@ -126,7 +110,18 @@ public class GameServer implements Terminal {
     }
 
     private static void askForReplay() {
-        broadcast("\n🏆 O jogo terminou! Decida se quer revanche.");
+        // Determina o vencedor
+        PlayerHandler winner = players.stream()
+                .filter(player -> !player.isEliminated())
+                .findFirst()
+                .orElse(null);
+
+        String winnerMessage = (winner != null)
+                ? "🏆 O Grande Vencedor é: " + winner.getColor() + winner.getName() + RESETAR
+                : "❌ Nenhum vencedor definido.";
+
+        // Mensagem final com emoji de fim de jogo
+        broadcast("\n🏁 O jogo terminou! " + winnerMessage + " Decida se quer revanche.");
 
         List<PlayerHandler> playersToRemove = new ArrayList<>();
 
@@ -179,6 +174,7 @@ public class GameServer implements Terminal {
             }
         }
     }
+
 
     private static void broadcast(String message) {
         for (PlayerHandler player : players) {
