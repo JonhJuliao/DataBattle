@@ -2,6 +2,7 @@ package org.example;
 
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.Random;
 
 //TODO: Comentários para estudo, remover antes de enviar e apresentar ao professor
@@ -47,7 +48,8 @@ public class PlayerHandler implements Runnable {
 
     public void sendMessage(String message) {
         try {
-            out.writeBytes(message + "\n");
+            out.write((message + "\n").getBytes(StandardCharsets.UTF_8));
+            out.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
