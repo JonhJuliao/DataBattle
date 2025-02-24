@@ -17,9 +17,12 @@ public class GameServer implements Terminal {
     private static final String[] PLAYER_COLORS = {AZUL, AMARELO, VERDE, MAGENTA};
 
     public static void main(String[] args) throws Exception {
-        try (ServerSocket serverSocket = new ServerSocket(SERVER_PORT)) {
-            log("✅ Servidor rodando na porta " + SERVER_PORT);
-
+        ServerSocket serverSocket = new ServerSocket(SERVER_PORT);
+        log("✅ Servidor rodando na porta " + SERVER_PORT);
+        waitingForPlayers(serverSocket);
+    }
+    private static void waitingForPlayers(ServerSocket serverSocket){
+        try {
             while (players.size() < MAX_PLAYERS) {
                 log("⏳ Aguardando novos jogadores...");
                 Socket connectionSocket = serverSocket.accept();
@@ -40,9 +43,11 @@ public class GameServer implements Terminal {
             log("✅ Todos os jogadores confirmaram. Iniciando partida!");
             broadcast("🔥 O jogo vai começar!");
 
-            startGame();
+            startGame(serverSocket);
         } catch (IOException e) {
             log("❌ Erro ao iniciar o servidor: " + e.getMessage());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -62,7 +67,7 @@ public class GameServer implements Terminal {
         return confirmedPlayers.size() == MAX_PLAYERS;
     }
 
-    private static void startGame() throws IOException {
+    private static void startGame(ServerSocket serverSocket) throws IOException {
         while (!game.isGameOver()) {
             Map<PlayerHandler, Integer> diceResults = new HashMap<>();
 
@@ -100,7 +105,7 @@ public class GameServer implements Terminal {
             }
         }
 
-        askForReplay();
+        askForReplay(serverSocket);
     }
 
     private static void assignPlayerColors() {
@@ -109,7 +114,7 @@ public class GameServer implements Terminal {
         }
     }
 
-    private static void askForReplay() {
+    private static void askForReplay(ServerSocket serverSocket) {
         // Determina o vencedor
         PlayerHandler winner = players.stream()
                 .filter(player -> !player.isEliminated())
@@ -170,13 +175,13 @@ public class GameServer implements Terminal {
         }
 
         if (players.isEmpty()) {
-            log("💀 Todos os jogadores saíram. Encerrando servidor.");
-            System.exit(0);
+            log("💀 Todos os jogadores saíram. Esperando novos jogadores se conectarem");
+            waitingForPlayers(serverSocket);
         } else {
-            log("🔄 Revanche iniciada com " + players.size() + " jogadores.");
+            log("🔄 A revanche será iniciada assim que houver 4 jogadores.");;
             try {
-                startGame();
-            } catch (IOException e) {
+                waitingForPlayers(serverSocket);
+            } catch (Exception e) {
                 log("❌ Erro ao reiniciar o jogo: " + e.getMessage());
             }
         }
