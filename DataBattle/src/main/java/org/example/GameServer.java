@@ -141,8 +141,15 @@ public class GameServer implements Terminal {
 
                 String response = player.readMessage();
                 if ("sim".equalsIgnoreCase(response)) {
-                    player.resetPlayer();
-                    log("✅ " + player.getName() + " optou por jogar novamente.");
+                    if(players.size()==1){
+                        log("✅ " + player.getName() + " foi o único que optou por jogar novamente, o jogador será desconectado");
+                        player.sendMessage("Você foi o único que optou por jogar novamente, você será desconectado");
+                        playersToRemove.add(player);
+                    }
+                    else{
+                        player.resetPlayer();
+                        log("✅ " + player.getName() + " optou por jogar novamente.");
+                    }
                 } else {
                     log("🚪 " + player.getName() + " optou por sair.");
                     player.closeConnection();
