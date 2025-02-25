@@ -1,11 +1,17 @@
 package org.example;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.io.IOException;           // Certifique-se de que a classe Game esteja nesse pacote
+import java.net.ServerSocket;  // Certifique-se de que a classe PlayerHandler esteja nesse pacote
+import java.net.Socket;       // Certifique-se de que a interface Terminal esteja nesse pacote
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 
 public class GameServer implements Terminal {
 
@@ -21,11 +27,16 @@ public class GameServer implements Terminal {
         log("✅ Servidor rodando na porta " + SERVER_PORT);
         waitingForPlayers(serverSocket);
     }
-    private static void waitingForPlayers(ServerSocket serverSocket){
+
+    private static void waitingForPlayers(ServerSocket serverSocket) {
         try {
             while (players.size() < MAX_PLAYERS) {
                 log("⏳ Aguardando novos jogadores...");
                 Socket connectionSocket = serverSocket.accept();
+                if (players.size() >= MAX_PLAYERS) {
+                    connectionSocket.close(); // Fecha a conexão se já houver 4 jogadores
+                    continue;
+                }
                 PlayerHandler player = new PlayerHandler(connectionSocket);
                 players.add(player);
                 new Thread(player).start();
@@ -44,10 +55,8 @@ public class GameServer implements Terminal {
             broadcast("🔥 O jogo vai começar!");
 
             startGame(serverSocket);
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             log("❌ Erro ao iniciar o servidor: " + e.getMessage());
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -146,12 +155,11 @@ public class GameServer implements Terminal {
 
                 String response = player.readMessage();
                 if ("sim".equalsIgnoreCase(response)) {
-                    if(players.size()==1){
+                    if (players.size() == 1) {
                         log("✅ " + player.getName() + " foi o único que optou por jogar novamente, o jogador será desconectado");
                         player.sendMessage("Você foi o único que optou por jogar novamente, você será desconectado");
                         playersToRemove.add(player);
-                    }
-                    else{
+                    } else {
                         player.resetPlayer();
                         log("✅ " + player.getName() + " optou por jogar novamente.");
                     }
@@ -178,7 +186,7 @@ public class GameServer implements Terminal {
             log("💀 Todos os jogadores saíram. Esperando novos jogadores se conectarem");
             waitingForPlayers(serverSocket);
         } else {
-            log("🔄 A revanche será iniciada assim que houver 4 jogadores.");;
+            log("🔄 A revanche será iniciada assim que houver 4 jogadores.");
             try {
                 waitingForPlayers(serverSocket);
             } catch (Exception e) {
@@ -186,7 +194,6 @@ public class GameServer implements Terminal {
             }
         }
     }
-
 
     private static void broadcast(String message) {
         for (PlayerHandler player : players) {

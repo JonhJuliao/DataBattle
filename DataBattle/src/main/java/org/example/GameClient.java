@@ -30,23 +30,23 @@ public class GameClient implements Terminal {
                 if (serverMessage.contains("👉 Seu nome:")) {
                     System.out.print("👉 Digite seu nome: ");
                     playerName = scanner.nextLine();
-                    sendToServer(outToServer, playerName);
+                    sendToServer(outToServer, playerName); // Envia o nome ao servidor
                     continue;
                 }
 
-                // Substitui o nome pelo termo 'Você'
-                if (playerName != null) {
+                // Exibe as mensagens do servidor e substitui o nome do jogador por "Você"
+                if (playerName != null && serverMessage.contains(playerName)) {
                     serverMessage = serverMessage.replace(playerName, "Você");
                 }
 
                 // Exibe as mensagens recebidas
                 System.out.println(serverMessage);
 
-                // Entrada para rolagem ou confirmação
+                // Entrada para rolagem de dados ou confirmação de outra ação
                 if (serverMessage.contains("Digite") || serverMessage.contains("ENTER")) {
-                    System.out.print("👉 ");
-                    String userInput = scanner.nextLine();
-                    sendToServer(outToServer, userInput);
+                    System.out.print("👉 Pressione ENTER para rolar o dado: ");
+                    scanner.nextLine();  // Espera o jogador pressionar ENTER para rolar o dado
+                    sendToServer(outToServer, "rolar");  // Envia um comando para rolar o dado
                 }
 
                 // Entrada para revanche

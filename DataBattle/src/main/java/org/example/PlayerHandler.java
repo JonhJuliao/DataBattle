@@ -120,12 +120,12 @@ public class PlayerHandler implements Runnable, Terminal {
     // 🔄 Reset para Nova Partida
     // ============================
     public void resetPlayer() {
-        health = 100;
+        health = 50;
         eliminated = false;  // Volta a ser ativo
         hasRolled = false;
         ready = false;
         diceRoll = 0;
-        sendMessage("🔄 Sua vida foi restaurada para 100. Prepare-se para a nova partida!");
+        sendMessage("🔄 Sua vida foi restaurada para 100%. Prepare-se para a nova partida!");
     }
 
     public void setEliminated(boolean eliminated) {

@@ -99,4 +99,8 @@ public class Game implements Terminal {
         long activePlayers = players.stream().filter(p -> !p.isEliminated()).count();
         return activePlayers <= 1;
     }
+
+    public List<PlayerHandler> getPlayers() {
+        return players;
+    }
 }
