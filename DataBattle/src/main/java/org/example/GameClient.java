@@ -45,7 +45,7 @@ public class GameClient implements Terminal {
                 // Entrada para rolagem ou confirmação
                 if (serverMessage.contains("Digite") || serverMessage.contains("ENTER")) {
                     System.out.print("👉 ");
-                    String userInput = scanner.nextLine();
+                    String userInput = scanner.nextLine().trim();
                     sendToServer(outToServer, userInput);
                 }
 
