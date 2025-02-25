@@ -30,31 +30,23 @@ public class GameClient implements Terminal {
                 if (serverMessage.contains("👉 Seu nome:")) {
                     System.out.print("👉 Digite seu nome: ");
                     playerName = scanner.nextLine();
-                    sendToServer(outToServer, playerName); // Envia o nome ao servidor
+                    sendToServer(outToServer, playerName);
                     continue;
                 }
 
-                // Exibe as mensagens do servidor e substitui o nome do jogador por "Você"
-                if (playerName != null && serverMessage.contains(playerName)) {
+                // Substitui o nome pelo termo 'Você'
+                if (playerName != null) {
                     serverMessage = serverMessage.replace(playerName, "Você");
                 }
 
                 // Exibe as mensagens recebidas
                 System.out.println(serverMessage);
 
-                // Aguardando confirmação de prontidão antes de rolar
-                if (serverMessage.contains("Digite '1' para confirmar sua participação e que está pronto para começar!")) {
-                    System.out.print("👉 Digite '1' para confirmar sua participação: ");
-                    String userInput = scanner.nextLine();
-                    sendToServer(outToServer, userInput); // Confirma prontidão
-                    continue;
-                }
-
-                // Entrada para rolagem de dados ou confirmação de outra ação
+                // Entrada para rolagem ou confirmação
                 if (serverMessage.contains("Digite") || serverMessage.contains("ENTER")) {
-                    System.out.print("👉 Pressione ENTER para rolar o dado: ");
-                    scanner.nextLine();  // Espera o jogador pressionar ENTER para rolar o dado
-                    sendToServer(outToServer, "rolar");  // Envia o comando "rolar" para o servidor
+                    System.out.print("👉 ");
+                    String userInput = scanner.nextLine();
+                    sendToServer(outToServer, userInput);
                 }
 
                 // Entrada para revanche
