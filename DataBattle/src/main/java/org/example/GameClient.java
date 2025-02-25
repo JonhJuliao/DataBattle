@@ -42,11 +42,19 @@ public class GameClient implements Terminal {
                 // Exibe as mensagens recebidas
                 System.out.println(serverMessage);
 
+                // Aguardando confirmação de prontidão antes de rolar
+                if (serverMessage.contains("Digite '1' para confirmar sua participação e que está pronto para começar!")) {
+                    System.out.print("👉 Digite '1' para confirmar sua participação: ");
+                    String userInput = scanner.nextLine();
+                    sendToServer(outToServer, userInput); // Confirma prontidão
+                    continue;
+                }
+
                 // Entrada para rolagem de dados ou confirmação de outra ação
                 if (serverMessage.contains("Digite") || serverMessage.contains("ENTER")) {
                     System.out.print("👉 Pressione ENTER para rolar o dado: ");
                     scanner.nextLine();  // Espera o jogador pressionar ENTER para rolar o dado
-                    sendToServer(outToServer, "rolar");  // Envia um comando para rolar o dado
+                    sendToServer(outToServer, "rolar");  // Envia o comando "rolar" para o servidor
                 }
 
                 // Entrada para revanche

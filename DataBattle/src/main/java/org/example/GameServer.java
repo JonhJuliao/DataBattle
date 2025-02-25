@@ -1,8 +1,8 @@
 package org.example;
 
-import java.io.IOException;           // Certifique-se de que a classe Game esteja nesse pacote
-import java.net.ServerSocket;  // Certifique-se de que a classe PlayerHandler esteja nesse pacote
-import java.net.Socket;       // Certifique-se de que a interface Terminal esteja nesse pacote
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -11,7 +11,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 
 public class GameServer implements Terminal {
 
@@ -91,7 +90,7 @@ public class GameServer implements Terminal {
                 player.resetRoll();
                 player.sendMessage("\n🚀 Sua vez! Pressione ENTER para rolar o dado.");
 
-                // Avisar os outros para aguardarem
+                // Espera a vez de cada jogador para rolar o dado
                 for (PlayerHandler otherPlayer : players) {
                     if (!otherPlayer.equals(player) && !otherPlayer.isEliminated()) {
                         otherPlayer.sendMessage("⏳ Espere os outros rolarem os dados...");
@@ -100,12 +99,13 @@ public class GameServer implements Terminal {
 
                 try {
                     player.waitForRoll();
-                    int diceRoll = player.rollDice();
-                    diceResults.put(player, diceRoll);
+                    int diceRoll = player.rollDice();  // Rola o dado
+                    diceResults.put(player, diceRoll);  // Armazena o resultado
                 } catch (IOException e) {
                     log("⚠️ Erro ao receber jogada de " + player.getName() + ": " + e.getMessage());
                 }
             }
+
             // Processa a rodada com base nas rolagens
             game.playRound(diceResults);
 
